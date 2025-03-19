@@ -46,7 +46,6 @@ export default function PaymentSection() {
             setTimeout(() => setPaymentStatus(null), 3000);
           }}
           theme="light"
-          buttonStyle="default"
           buttonText="Pay with Passkey"
         />
       )}

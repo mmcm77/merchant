@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// Define types for the SDK based on documentation
-interface AuthResult {
+// Define SDK types
+export interface AuthResult {
   userId: string;
   email: string;
   passkeyCount: number;
@@ -11,7 +11,7 @@ interface AuthResult {
   expiresAt: number;
 }
 
-interface PasskeySDK {
+interface PayAuthSDK {
   mount: (element?: HTMLElement | string) => void;
   unmount: () => void;
   authenticate: () => Promise<AuthResult>;
@@ -19,14 +19,30 @@ interface PasskeySDK {
   destroy: () => void;
 }
 
+// Add global type declaration
 declare global {
   interface Window {
-    PasskeySDK?: {
-      init: (options: any) => PasskeySDK;
+    PayAuth?: {
+      init: (options: PayAuthOptions) => PayAuthSDK;
     };
   }
 }
 
+// PayAuth SDK initialization options
+interface PayAuthOptions {
+  merchantId: string;
+  serviceUrl: string;
+  theme?: "light" | "dark";
+  buttonText?: string;
+  container?: HTMLElement | string;
+  callbacks: {
+    onSuccess: (result: AuthResult) => void;
+    onError: (error: Error) => void;
+    onCancel?: () => void;
+  };
+}
+
+// Component props
 interface PayAuthButtonProps {
   merchantId: string;
   onSuccess?: (result: AuthResult) => void;
@@ -34,9 +50,6 @@ interface PayAuthButtonProps {
   onCancel?: () => void;
   theme?: "light" | "dark";
   buttonText?: string;
-  buttonStyle?: "default" | "minimal" | "branded";
-  useCustomButton?: boolean;
-  customButtonId?: string;
 }
 
 export default function PayAuthButton({
@@ -46,19 +59,22 @@ export default function PayAuthButton({
   onCancel,
   theme = "light",
   buttonText = "Pay with Passkey",
-  buttonStyle = "default",
-  useCustomButton = false,
-  customButtonId,
 }: PayAuthButtonProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const sdkRef = useRef<PasskeySDK | null>(null);
+  const sdkRef = useRef<PayAuthSDK | null>(null);
 
+  // Load SDK script
   useEffect(() => {
-    // Load the SDK script
+    // Avoid duplicate loading
+    if (document.querySelector('script[src*="payauth.min.js"]')) {
+      setIsLoaded(true);
+      return;
+    }
+
     const script = document.createElement("script");
-    script.src = "https://passkeys-one.vercel.app/sdk/payauth.min.js"; // Using our test URL for now
+    script.src = "https://passkeys-one.vercel.app/sdk/payauth.min.js";
     script.async = true;
 
     script.onload = () => {
@@ -66,16 +82,13 @@ export default function PayAuthButton({
     };
 
     script.onerror = () => {
-      setError("Failed to load Passkey SDK");
+      setError("Failed to load PayAuth SDK");
     };
 
     document.body.appendChild(script);
 
     return () => {
-      // Clean up script and SDK on unmount
-      if (script.parentNode) {
-        document.body.removeChild(script);
-      }
+      // Clean up SDK on unmount if we added the script
       if (sdkRef.current) {
         sdkRef.current.destroy();
       }
@@ -84,79 +97,39 @@ export default function PayAuthButton({
 
   // Initialize SDK when loaded
   useEffect(() => {
-    if (isLoaded && window.PasskeySDK) {
+    if (isLoaded && containerRef.current && window.PayAuth) {
       try {
-        const options = {
+        sdkRef.current = window.PayAuth.init({
           merchantId,
-          serviceUrl: "https://passkeys-one.vercel.app", // Using our test URL
+          serviceUrl: "https://passkeys-one.vercel.app",
           theme,
           buttonText,
-          buttonStyle,
           callbacks: {
             onSuccess: (result: AuthResult) => {
-              console.log("Authentication successful:", result);
               if (onSuccess) onSuccess(result);
             },
             onError: (error: Error) => {
-              console.error("Authentication error:", error);
               if (onError) onError(error);
             },
             onCancel: () => {
-              console.log("Authentication cancelled by user");
               if (onCancel) onCancel();
             },
           },
-        };
+        });
 
-        // If using auto-mount, add container to options
-        if (!useCustomButton && containerRef.current) {
-          sdkRef.current = window.PasskeySDK.init({
-            ...options,
-            container: containerRef.current,
-          });
-        } else {
-          // Otherwise initialize without container
-          sdkRef.current = window.PasskeySDK.init(options);
-
-          // For custom button, attach the authenticate method
-          if (useCustomButton && customButtonId) {
-            setTimeout(() => {
-              const customButton = document.getElementById(customButtonId);
-              if (customButton && sdkRef.current) {
-                customButton.addEventListener("click", () => {
-                  sdkRef.current
-                    ?.authenticate()
-                    .then((result: AuthResult) => {
-                      if (onSuccess) onSuccess(result);
-                    })
-                    .catch((error: Error) => {
-                      if (onError) onError(error);
-                    });
-                });
-              }
-            }, 0);
-          } else if (!useCustomButton && containerRef.current) {
-            // Manual mount to our container
-            sdkRef.current.mount(containerRef.current);
-          }
-        }
+        sdkRef.current.mount(containerRef.current);
       } catch (err) {
-        console.error("SDK initialization error:", err);
         setError(err instanceof Error ? err.message : "Unknown error");
       }
     }
-  }, [
-    isLoaded,
-    merchantId,
-    theme,
-    buttonText,
-    buttonStyle,
-    onSuccess,
-    onError,
-    onCancel,
-    useCustomButton,
-    customButtonId,
-  ]);
+
+    return () => {
+      // Clean up when props change or component unmounts
+      if (sdkRef.current) {
+        sdkRef.current.unmount();
+      }
+    };
+  }, [isLoaded, merchantId, theme, buttonText, onSuccess, onError, onCancel]);
 
   if (error) {
     return <div className="text-red-500">Error: {error}</div>;

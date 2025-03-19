@@ -1,16 +1,13 @@
-# PasskeySDK Demo
+# PayAuth SDK Demo
 
-This is a Next.js demo application that showcases the integration of the PasskeySDK for passkey-based authentication and payments.
+This is a Next.js demo application that showcases the integration of the PayAuth SDK for passkey-based authentication and payments.
 
 ## Overview
 
-This demo app demonstrates how to integrate the PasskeySDK into a Next.js application to enable passkey-based authentication for payments. The application includes:
+This demo app demonstrates how to integrate the PayAuth SDK into a Next.js application to enable passkey-based authentication for payments. The implementation follows the official SDK documentation to provide a clean, reliable integration. The application includes:
 
-- A client-side PayAuthButton component that loads and initializes the PasskeySDK
-- Multiple implementation options:
-  - Standard button - SDK manages the button rendering
-  - Custom button - Attach the SDK's authenticate method to your own button
-- Example checkout pages showing different integration approaches
+- A client-side PayAuthButton component that loads and initializes the PayAuth SDK
+- A checkout page showing how to use the PayAuth SDK in a payment flow
 - A mock API endpoint for processing payments
 
 ## Getting Started
@@ -39,56 +36,82 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the demo application.
 
-## SDK Integration Methods
+## SDK Integration Details
 
-The PayAuthButton component supports two main integration methods:
+The implementation follows the official Next.js integration guide from the PayAuth SDK documentation:
 
-### 1. Standard Button (SDK manages the UI)
+1. **PayAuthButton Component**: A client component that:
+
+   - Dynamically loads the SDK script
+   - Initializes the SDK with your merchant ID and options
+   - Handles authentication events
+   - Provides callbacks for success, error, and cancellation
+
+2. **Checkout Page Pattern**:
+
+   - Uses a client component wrapper for the SDK integration
+   - Demonstrates proper separation of server and client components
+   - Implements a complete checkout flow with order summary and payment processing
+
+3. **API Route for Payment Processing**:
+   - Shows how to process the authentication token
+   - Demonstrates payment verification flow (simulated)
+   - Returns appropriate success/error responses
+
+## Implementation Pattern
+
+The pattern used in this demo follows Next.js best practices:
 
 ```tsx
-<PayAuthButton
-  merchantId="YOUR_MERCHANT_ID"
-  onSuccess={(result) => {
-    // Handle successful authentication
-  }}
-  onError={(error) => {
-    // Handle authentication errors
-  }}
-  onCancel={() => {
-    // Handle user cancellation
-  }}
-  theme="light"
-  buttonStyle="default"
-  buttonText="Pay with Passkey"
-/>
+// Client component wrapper
+function CheckoutPayment() {
+  "use client";
+
+  const handlePaymentSuccess = async (result) => {
+    // Process payment with your backend
+  };
+
+  return (
+    <PayAuthButton
+      merchantId="YOUR_MERCHANT_ID"
+      buttonText="Complete Purchase with Passkey"
+      onSuccess={handlePaymentSuccess}
+      onError={(error) => {
+        /* Handle errors */
+      }}
+      onCancel={() => {
+        /* Handle cancellation */
+      }}
+    />
+  );
+}
+
+// Server component
+export default function CheckoutPage() {
+  return (
+    <div>
+      {/* Order summary - server component content */}
+      <div>
+        <h2>Order Summary</h2>
+        {/* Content... */}
+      </div>
+
+      {/* Payment section with client component */}
+      <div>
+        <h2>Payment</h2>
+        <Suspense fallback={<div>Loading payment options...</div>}>
+          <CheckoutPayment />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
 ```
-
-### 2. Custom Button (You control the UI)
-
-```tsx
-<button id="custom-passkey-button">Your Custom Button</button>
-
-<PayAuthButton
-  merchantId="YOUR_MERCHANT_ID"
-  onSuccess={handleSuccess}
-  onError={handleError}
-  onCancel={handleCancel}
-  useCustomButton={true}
-  customButtonId="custom-passkey-button"
-/>
-```
-
-## Checkout Flow Examples
-
-The demo includes two checkout page examples:
-
-1. `/checkout` - Uses a server component with a client component wrapper for the PasskeySDK button
-2. `/checkout-alt` - A fully client component implementation showing both standard and custom button options
 
 ## Notes
 
 - This is a demo application. In a production environment, you would:
-  - Use your actual merchant ID from PasskeySDK provider
+  - Use your actual merchant ID from PayAuth dashboard
   - Implement proper payment processing with your payment provider
   - Add appropriate error handling and user feedback
   - Consider adding additional security measures
@@ -97,4 +120,4 @@ The demo includes two checkout page examples:
 
 To learn more about Next.js, check out the [Next.js documentation](https://nextjs.org/docs).
 
-For more information about the PasskeySDK and passkey-based authentication, refer to the PasskeySDK documentation.
+For more information about the PayAuth SDK and passkey-based authentication, refer to the PayAuth SDK documentation.

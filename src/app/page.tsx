@@ -1,106 +1,173 @@
-import Image from "next/image";
-import Link from "next/link";
+"use client";
 
-export default function Home() {
+import { Suspense } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import PayAuthButton from "@/components/PayAuthButton";
+import { AuthResult } from "@/components/PayAuthButton";
+
+// Client component wrapper to handle payment processing
+function CheckoutPayment() {
+  "use client";
+
+  const handlePaymentSuccess = async (result: AuthResult) => {
+    try {
+      // Update status to show processing
+      const statusElement = document.getElementById("checkout-status");
+      if (statusElement) {
+        statusElement.textContent = "Processing payment...";
+        statusElement.className = "text-sm text-center py-2 text-blue-600";
+      }
+
+      // Log the authentication result for debugging
+      console.log("Authentication successful with token:", result.token);
+
+      // Call API route to process the payment with the token
+      const response = await fetch("/api/process-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: result.token,
+          email: result.email,
+          userId: result.userId,
+          orderId: "12345",
+          amount: 99.99,
+        }),
+      });
+
+      // Check if the response was ok
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.error || `Server error: ${response.status}`;
+        console.error("Payment processing failed:", errorMessage);
+
+        if (statusElement) {
+          statusElement.textContent = `Payment failed: ${errorMessage}`;
+          statusElement.className = "text-sm text-center py-2 text-red-600";
+        }
+        return;
+      }
+
+      const data = await response.json();
+
+      if (statusElement) {
+        if (data.success) {
+          // Show success message (in production, redirect to success page)
+          statusElement.textContent = `Payment successful! Order #${data.orderId}`;
+          statusElement.className =
+            "text-sm text-center py-2 text-green-600 font-medium";
+        } else {
+          // Handle error
+          statusElement.textContent = `Payment failed: ${
+            data.error || "Unknown error"
+          }`;
+          statusElement.className = "text-sm text-center py-2 text-red-600";
+        }
+      }
+    } catch (err) {
+      console.error("Payment error:", err);
+      const statusElement = document.getElementById("checkout-status");
+      if (statusElement) {
+        statusElement.textContent =
+          "Payment processing error. Please try again.";
+        statusElement.className = "text-sm text-center py-2 text-red-600";
+      }
+    }
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
+    <div className="space-y-4">
+      <PayAuthButton
+        merchantId="DEMO_MERCHANT_123"
+        buttonText="Complete Purchase with Passkey"
+        onSuccess={handlePaymentSuccess}
+        onError={(error) => {
+          console.error("Authentication error:", error);
+          const statusElement = document.getElementById("checkout-status");
+          if (statusElement) {
+            statusElement.textContent = `Authentication failed: ${error.message}`;
+            statusElement.className = "text-sm text-center py-2 text-red-600";
+          }
+        }}
+        onCancel={() => {
+          const statusElement = document.getElementById("checkout-status");
+          if (statusElement) {
+            statusElement.textContent =
+              "Authentication cancelled. You can try again when ready.";
+            statusElement.className =
+              "text-sm text-center py-2 text-yellow-600";
+          }
+        }}
+      />
+      <div id="checkout-status" className="text-sm text-center py-2"></div>
+    </div>
+  );
+}
 
-        <div className="text-center sm:text-left">
-          <h1 className="text-3xl font-bold mb-4">PayAuth SDK Demo</h1>
-          <p className="mb-8 text-gray-600 max-w-md">
-            This is a demo application showing how to integrate the PayAuth SDK
-            for passkey-based authentication and payments.
-          </p>
-        </div>
+export default function CheckoutPage() {
+  return (
+    <div className="max-w-md mx-auto p-6">
+      <h1 className="text-2xl font-bold text-center mb-8">Simple Checkout</h1>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <Link
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="/checkout"
-          >
-            Checkout with PaymentSection
-          </Link>
-          <Link
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto"
-            href="/checkout-alt"
-          >
-            Checkout Alternative
-          </Link>
-        </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Order Summary</CardTitle>
+          <CardDescription>Review your order before payment</CardDescription>
+        </CardHeader>
 
-        <div className="mt-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg max-w-2xl w-full">
-          <h2 className="text-lg font-semibold mb-3">About PayAuth SDK</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-            The PayAuth SDK enables secure authentication and payments using
-            passkeys (WebAuthn), providing a passwordless experience for your
-            users.
-          </p>
-          <div className="text-sm bg-gray-100 dark:bg-gray-700 p-3 rounded-md">
-            <p className="font-mono">Integration is as simple as:</p>
-            <ol className="list-decimal pl-5 mt-2 space-y-1">
-              <li>Import the PayAuthButton component</li>
-              <li>Add it to your checkout flow</li>
-              <li>Handle the authentication result</li>
-            </ol>
+        <CardContent className="space-y-4">
+          <div className="flex justify-between items-center p-4 border rounded-lg bg-muted/50">
+            <div>
+              <h3 className="font-medium">Premium Plan</h3>
+              <p className="text-sm text-muted-foreground">
+                Monthly Subscription
+              </p>
+            </div>
+            <span className="font-medium">$99.99</span>
           </div>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+          <div className="pt-4 border-t">
+            <div className="flex justify-between mb-2">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span>$99.99</span>
+            </div>
+            <div className="flex justify-between mb-2">
+              <span className="text-muted-foreground">Tax</span>
+              <span>$0.00</span>
+            </div>
+            <div className="flex justify-between font-medium pt-2 border-t mt-2">
+              <span>Total</span>
+              <span>$99.99</span>
+            </div>
+          </div>
+        </CardContent>
+
+        <CardFooter className="flex flex-col">
+          <div className="w-full border p-4 rounded-lg">
+            <h3 className="text-sm font-medium mb-4">Payment Method</h3>
+            <Suspense
+              fallback={
+                <div className="text-center py-4">
+                  Loading payment options...
+                </div>
+              }
+            >
+              <CheckoutPayment />
+            </Suspense>
+          </div>
+
+          <div className="text-xs text-center text-muted-foreground mt-4">
+            Your data is secure and encrypted
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
