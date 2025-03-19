@@ -116,23 +116,14 @@ export default function PayAuthButton({
   useEffect(() => {
     if (isLoaded && containerRef.current && window.PayAuth) {
       try {
-        console.log(
-          "Initializing PayAuth SDK with token:",
-          apiToken ? "Token provided" : "No token"
-        );
+        console.log("Initializing PayAuth SDK with test token");
 
-        // Following the exact documentation example
         sdkRef.current = window.PayAuth.init({
-          merchantId: merchantId,
-          apiToken: apiToken, // Make sure this is passed correctly
+          merchantId,
+          apiToken,
           serviceUrl: "https://passkeys-one.vercel.app",
-          theme: theme,
-          buttonText: buttonText,
-          // Explicitly set the allowed origins
-          allowedOrigins: [
-            "https://merchant-steel.vercel.app",
-            "http://localhost:3000",
-          ],
+          theme,
+          buttonText,
           callbacks: {
             onSuccess: (result: AuthResult) => {
               console.log("SDK Success callback with result:", result);
