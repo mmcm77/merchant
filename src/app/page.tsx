@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import {
   Card,
   CardContent,
@@ -16,97 +16,71 @@ import { AuthResult } from "@/components/PayAuthButton";
 function CheckoutPayment() {
   "use client";
 
+  const [status, setStatus] = useState("");
+
   const handlePaymentSuccess = async (result: AuthResult) => {
     try {
-      // Update status to show processing
-      const statusElement = document.getElementById("checkout-status");
-      if (statusElement) {
-        statusElement.textContent = "Processing payment...";
-        statusElement.className = "text-sm text-center py-2 text-blue-600";
-      }
-
-      // Log the authentication result for debugging
       console.log("Authentication successful with token:", result.token);
+      setStatus("Processing payment...");
 
-      // Call API route to process the payment with the token
+      // Call API to process payment with token
       const response = await fetch("/api/process-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token: result.token,
-          email: result.email,
           userId: result.userId,
-          orderId: "12345",
+          email: result.email,
+          orderId: "ORDER-" + Math.floor(Math.random() * 1000),
           amount: 99.99,
         }),
       });
 
-      // Check if the response was ok
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
-          errorData.error || `Server error: ${response.status}`;
-        console.error("Payment processing failed:", errorMessage);
-
-        if (statusElement) {
-          statusElement.textContent = `Payment failed: ${errorMessage}`;
-          statusElement.className = "text-sm text-center py-2 text-red-600";
-        }
-        return;
-      }
-
       const data = await response.json();
 
-      if (statusElement) {
-        if (data.success) {
-          // Show success message (in production, redirect to success page)
-          statusElement.textContent = `Payment successful! Order #${data.orderId}`;
-          statusElement.className =
-            "text-sm text-center py-2 text-green-600 font-medium";
-        } else {
-          // Handle error
-          statusElement.textContent = `Payment failed: ${
-            data.error || "Unknown error"
-          }`;
-          statusElement.className = "text-sm text-center py-2 text-red-600";
-        }
+      if (!response.ok) {
+        const errorData = data as { error: string };
+        throw new Error(errorData.error || "Payment processing failed");
       }
-    } catch (err) {
-      console.error("Payment error:", err);
-      const statusElement = document.getElementById("checkout-status");
-      if (statusElement) {
-        statusElement.textContent =
-          "Payment processing error. Please try again.";
-        statusElement.className = "text-sm text-center py-2 text-red-600";
-      }
+
+      setStatus("Payment successful! Order ID: " + data.orderId);
+    } catch (error) {
+      console.error("Payment error:", error);
+      setStatus(
+        `Payment failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="mt-8">
       <PayAuthButton
         merchantId="DEMO_MERCHANT_123"
+        apiToken="payauth_test_tk_3f7c9a1b5d8e2f4a6c0b9d8e2f4a6c0b9d8e2f4a"
         buttonText="Complete Purchase with Passkey"
         onSuccess={handlePaymentSuccess}
         onError={(error) => {
           console.error("Authentication error:", error);
-          const statusElement = document.getElementById("checkout-status");
-          if (statusElement) {
-            statusElement.textContent = `Authentication failed: ${error.message}`;
-            statusElement.className = "text-sm text-center py-2 text-red-600";
-          }
+          setStatus(`Authentication error: ${error.message}`);
         }}
-        onCancel={() => {
-          const statusElement = document.getElementById("checkout-status");
-          if (statusElement) {
-            statusElement.textContent =
-              "Authentication cancelled. You can try again when ready.";
-            statusElement.className =
-              "text-sm text-center py-2 text-yellow-600";
-          }
-        }}
+        onCancel={() => setStatus("Authentication cancelled")}
       />
-      <div id="checkout-status" className="text-sm text-center py-2"></div>
+
+      {status && (
+        <div className="mt-4 p-4 rounded-md bg-slate-100 dark:bg-slate-800">
+          <p
+            className={`text-sm ${
+              status.includes("failed") || status.includes("error")
+                ? "text-red-500"
+                : ""
+            }`}
+          >
+            {status}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

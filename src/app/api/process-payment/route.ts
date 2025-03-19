@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+// API test token for PayAuth service
+const PAYAUTH_API_TOKEN =
+  "payauth_test_tk_3f7c9a1b5d8e2f4a6c0b9d8e2f4a6c0b9d8e2f4a";
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -18,7 +22,10 @@ export async function POST(request: Request) {
         "https://passkeys-one.vercel.app/api/verify-token",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${PAYAUTH_API_TOKEN}`,
+          },
           body: JSON.stringify({ token }),
         }
       );

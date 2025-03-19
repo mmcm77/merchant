@@ -31,6 +31,7 @@ declare global {
 // PayAuth SDK initialization options
 interface PayAuthOptions {
   merchantId: string;
+  apiToken?: string;
   serviceUrl: string;
   theme?: "light" | "dark";
   buttonText?: string;
@@ -45,6 +46,7 @@ interface PayAuthOptions {
 // Component props
 interface PayAuthButtonProps {
   merchantId: string;
+  apiToken?: string;
   onSuccess?: (result: AuthResult) => void;
   onError?: (error: Error) => void;
   onCancel?: () => void;
@@ -54,6 +56,7 @@ interface PayAuthButtonProps {
 
 export default function PayAuthButton({
   merchantId,
+  apiToken = "payauth_test_tk_3f7c9a1b5d8e2f4a6c0b9d8e2f4a6c0b9d8e2f4a", // Default to the test token
   onSuccess,
   onError,
   onCancel,
@@ -101,6 +104,7 @@ export default function PayAuthButton({
       try {
         sdkRef.current = window.PayAuth.init({
           merchantId,
+          apiToken,
           serviceUrl: "https://passkeys-one.vercel.app",
           theme,
           buttonText,
@@ -129,7 +133,16 @@ export default function PayAuthButton({
         sdkRef.current.unmount();
       }
     };
-  }, [isLoaded, merchantId, theme, buttonText, onSuccess, onError, onCancel]);
+  }, [
+    isLoaded,
+    merchantId,
+    apiToken,
+    theme,
+    buttonText,
+    onSuccess,
+    onError,
+    onCancel,
+  ]);
 
   if (error) {
     return <div className="text-red-500">Error: {error}</div>;
