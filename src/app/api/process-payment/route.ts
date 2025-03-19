@@ -18,6 +18,11 @@ export async function POST(request: Request) {
 
     // 1. Verify the authentication token with PayAuth service
     try {
+      console.log(
+        "Verifying token with PayAuth service:",
+        token.substring(0, 10) + "..."
+      );
+
       const verifyResponse = await fetch(
         "https://passkeys-one.vercel.app/api/verify-token",
         {
@@ -33,9 +38,16 @@ export async function POST(request: Request) {
       // Check if the verification call was successful
       if (!verifyResponse.ok) {
         const errorData = await verifyResponse.json().catch(() => ({}));
-        console.error("Token verification failed:", errorData);
+        console.error(
+          "Token verification failed:",
+          verifyResponse.status,
+          errorData
+        );
         return NextResponse.json(
-          { success: false, error: "Token verification failed" },
+          {
+            success: false,
+            error: `Token verification failed: ${verifyResponse.status}`,
+          },
           { status: 401 }
         );
       }

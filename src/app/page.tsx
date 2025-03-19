@@ -20,7 +20,14 @@ function CheckoutPayment() {
 
   const handlePaymentSuccess = async (result: AuthResult) => {
     try {
-      console.log("Authentication successful with token:", result.token);
+      console.log("Authentication successful with full result:", result);
+
+      if (!result.token) {
+        setStatus("Error: Authentication token is missing from the result");
+        console.error("Token is undefined in authentication result", result);
+        return;
+      }
+
       setStatus("Processing payment...");
 
       // Call API to process payment with token
